@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PC BOARD</title>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Special+Elite&family=Permanent+Marker&family=Roboto+Mono&family=Bungee&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Special+Elite&family=Permanent+Marker&display=swap" rel="stylesheet">
 
     <style>
         :root {
@@ -24,7 +24,6 @@
             user-select: none;
         }
 
-        /* TOOLBAR */
         #toolbar {
             position: fixed;
             bottom: 20px;
@@ -34,7 +33,7 @@
             padding: 10px 20px;
             border-radius: 8px;
             display: flex;
-            gap: 10px;
+            gap: 15px;
             align-items: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             z-index: 1000;
@@ -54,73 +53,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            white-space: nowrap;
         }
 
-            .tool-btn:hover {
-                background: #555;
-            }
-
-            .tool-btn.active {
-                background: #d9534f !important;
-                border-color: white !important;
-                box-shadow: 0 0 15px #ff0000;
-            }
-
-        #item-color-picker {
-            width: 35px !important;
-            height: 35px !important;
-            min-width: 35px;
-            padding: 0;
-            border: 2px solid #666;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        /* THEME PANEL */
-        #theme-panel {
-            position: fixed;
-            top: 20px;
-            right: -320px;
-            width: 260px;
-            background: #222;
-            border: 1px solid #444;
-            border-radius: 8px 0 0 8px;
-            padding: 20px;
-            z-index: 1100;
-            transition: right 0.3s ease;
-            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
-        }
-
-            #theme-panel.open {
-                right: 0;
-            }
-
-        .theme-section {
-            margin-bottom: 15px;
-            border-bottom: 1px solid #444;
-            padding-bottom: 10px;
-        }
-
-            .theme-section label {
-                display: block;
-                font-size: 12px;
-                margin-bottom: 5px;
-                color: #aaa;
-            }
-
-        .sidebar-input {
-            width: 100%;
-            padding: 8px;
-            background: #333;
-            color: white;
-            border: 1px solid #555;
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-family: inherit;
-        }
-
-        /* CANVAS & FIXED STRINGS */
         #board {
             width: 100vw;
             height: 100vh;
@@ -136,7 +70,6 @@
             transform-origin: 0 0;
         }
 
-        /* The SVG is now part of the canvas so it moves with items */
         #connections {
             position: absolute;
             top: 0;
@@ -146,83 +79,38 @@
             z-index: 1;
         }
 
-        /* ITEMS */
         .item {
             position: absolute;
-            min-width: 80px;
-            min-height: 80px;
+            min-width: 50px;
+            min-height: 50px;
             box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
-            cursor: grab;
             z-index: 2;
-            border-radius: 2px;
+            border-radius: 4px;
             display: flex;
             flex-direction: column;
-            box-sizing: border-box;
-            font-family: var(--main-font);
         }
 
             .item.selected {
                 outline: 4px solid #00ffcc;
-                outline-offset: 2px;
+                z-index: 5;
             }
-
-            .item.connecting-source {
-                outline: 6px solid #ff0055 !important;
-                animation: pulse 0.8s infinite;
-                z-index: 100;
-            }
-
-        @keyframes pulse {
-            0% {
-                outline-offset: 0px;
-            }
-
-            50% {
-                outline-offset: 8px;
-            }
-
-            100% {
-                outline-offset: 0px;
-            }
-        }
 
         .item-content {
             width: 100%;
             height: 100%;
             outline: none;
             white-space: pre-wrap;
-            pointer-events: none;
-            padding: 10px;
+            padding: 15px;
             box-sizing: border-box;
             color: #000;
             font-weight: bold;
-            overflow: hidden;
+            overflow-y: auto;
             font-family: inherit;
-        }
-
-        .item.editing .item-content {
-            pointer-events: auto;
             cursor: text;
-            background: rgba(255,255,255,0.4);
+            user-select: text;
         }
 
-        /* SOUND ITEM STYLING */
-        .sound-icon {
-            font-size: 50px;
-            text-align: center;
-            margin-top: 20px;
-            cursor: pointer;
-            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));
-        }
-
-        .sound-label {
-            font-size: 12px;
-            text-align: center;
-            color: black;
-            font-weight: bold;
-            padding: 5px;
-        }
-
+        /* IMAGE STRETCH FIX: Changed object-fit to 'fill' to allow free distortion */
         .item img {
             width: 100%;
             height: 100%;
@@ -231,16 +119,46 @@
             display: block;
         }
 
+        /* AUDIO FIXES: Bigger text and internal padding for alignment */
+        .audio-container {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            height: 100%;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+
+        .audio-name {
+            color: #000;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-bottom: 5px;
+        }
+
+        audio {
+            width: 100%;
+            height: 35px;
+            filter: invert(100%) hue-rotate(180deg) brightness(1.5);
+        }
+
         .resizer {
-            width: 20px;
-            height: 20px;
-            background: rgba(255,255,255,0.9);
+            width: 22px;
+            height: 22px;
+            background: rgba(0,0,0,0.4);
             position: absolute;
             right: 0;
             bottom: 0;
             cursor: nwse-resize;
             z-index: 10;
-            border: 1px solid #000;
+            border-radius: 0 0 4px 0;
+            border: 1px solid rgba(255,255,255,0.2);
         }
 
         .del-btn {
@@ -253,63 +171,28 @@
             color: white;
             border-radius: 50%;
             text-align: center;
-            line-height: 26px;
-            font-size: 14px;
             cursor: pointer;
-            display: none;
-            z-index: 11;
             font-weight: bold;
+            line-height: 26px;
+            z-index: 11;
             border: 2px solid white;
+            display: none;
         }
 
         .item:hover .del-btn {
             display: block;
         }
-
-        #start-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #111;
-            z-index: 2000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-        }
     </style>
 </head>
 <body>
 
-    <div id="start-screen">
+    <div id="start-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#111; z-index:2000; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;">
         <h1 style="border: 4px solid red; padding: 20px;">PC BOARD</h1>
         <div style="display:flex; gap: 20px;">
-            <button class="tool-btn" onclick="initBoard('new')">CREATE NEW BOARD</button>
-            <button class="tool-btn" onclick="document.getElementById('file-loader').click()">LOAD .BOARD FILE</button>
+            <button class="tool-btn" onclick="initBoard('new')">NEW BOARD</button>
+            <button class="tool-btn" onclick="document.getElementById('file-loader').click()">LOAD .BOARD</button>
         </div>
         <input type="file" id="file-loader" style="display:none" accept=".board" onchange="loadBoardFile(this)">
-    </div>
-
-    <div id="theme-panel">
-        <h3 style="margin-top:0">Settings</h3>
-        <div class="theme-section">
-            <label>Font Style</label>
-            <select class="sidebar-input" id="font-picker" onchange="updateTheme('font', this.value)">
-                <option value="'Special Elite', serif">Typewriter</option>
-                <option value="'Press Start 2P', cursive">Minecraft / Pixel</option>
-                <option value="'Permanent Marker', cursive">Handwritten</option>
-                <option value="'Bungee', sans-serif">Industrial</option>
-                <option value="'Roboto Mono', monospace">Terminal</option>
-            </select>
-        </div>
-        <div class="theme-section">
-            <label>Board Background</label>
-            <input type="color" class="sidebar-input" id="bg-color-picker" oninput="updateTheme('bg', this.value)">
-        </div>
-        <button class="tool-btn" style="width:100%" onclick="toggleThemePanel()">Close</button>
     </div>
 
     <div id="board" onmousedown="startPan(event)" onwheel="handleZoom(event)">
@@ -319,228 +202,161 @@
     </div>
 
     <div id="toolbar">
-        <input type="color" id="item-color-picker" value="#ffeb3b">
-        <button class="tool-btn" onclick="paintSelected()">🎨 Paint</button>
-        <div style="width:1px; height:25px; background:#444;"></div>
+        <input type="color" id="item-color-picker" value="#ffeb3b" style="width:40px; height:35px;" oninput="liveUpdateColor(this.value)">
         <button class="tool-btn" onclick="addItem('note')">📝 Note</button>
         <button class="tool-btn" onclick="triggerUpload('image')">📷 Image</button>
         <button class="tool-btn" onclick="triggerUpload('sound')">🎙️ Audio</button>
         <button id="btn-connect" class="tool-btn" onclick="toggleConnectMode()">🔗 String</button>
-        <button class="tool-btn" onclick="toggleThemePanel()">⚙️ Settings</button>
-        <div style="width:1px; height:25px; background:#444;"></div>
         <button class="tool-btn" onclick="undo()">↩ Undo</button>
-        <button class="tool-btn" onclick="saveBoard()" style="background:#28a745; border-color:#fff;">💾 Save Board</button>
+        <button class="tool-btn" onclick="saveBoard()" style="background:#28a745;">💾 Save</button>
     </div>
 
     <input type="file" id="universal-upload" style="display:none">
 
     <script>
-        let state = {
-            items: [], connections: [],
-            view: { x: 0, y: 0, zoom: 1 },
-            theme: { bg: '#1a1a1a', font: "'Special Elite', serif" }
-        };
+        let state = { items: [], connections: [], view: { x: 0, y: 0, zoom: 1 } };
         let history = []; let historyIndex = -1;
-        let connectMode = false, connectStartId = null, selectedId = null, dragItem = null, resizeItem = null, isPanning = false, offset = { x: 0, y: 0 };
+        let connectMode = false, connectStartId = null, selectedId = null, offset = { x: 0, y: 0 };
 
-        function initBoard(mode) {
-            if (mode === 'new') saveHistory();
-            document.getElementById('start-screen').style.display = 'none';
-            applyTheme(); updateCanvasTransform(); render();
-        }
+        function initBoard(m) { if (m === 'new') saveHistory(); document.getElementById('start-screen').style.display = 'none'; render(); }
+        function saveHistory() { if (historyIndex < history.length - 1) history = history.slice(0, historyIndex + 1); history.push(JSON.parse(JSON.stringify(state))); historyIndex++; }
+        function undo() { if (historyIndex > 0) { historyIndex--; state = JSON.parse(JSON.stringify(history[historyIndex])); updateCanvasTransform(); render(); } }
 
-        // --- THEME & SETTINGS ---
-        function toggleThemePanel() { document.getElementById('theme-panel').classList.toggle('open'); }
-        function updateTheme(key, value) { state.theme[key] = value; applyTheme(); saveHistory(); }
-        function applyTheme() {
-            document.documentElement.style.setProperty('--bg-color', state.theme.bg);
-            document.documentElement.style.setProperty('--main-font', state.theme.font);
-            document.documentElement.style.setProperty('--dot-color', shadeColor(state.theme.bg, 10));
-            document.getElementById('bg-color-picker').value = state.theme.bg;
-            document.getElementById('font-picker').value = state.theme.font;
-        }
-        function shadeColor(color, percent) {
-            let R = parseInt(color.substring(1, 3), 16), G = parseInt(color.substring(3, 5), 16), B = parseInt(color.substring(5, 7), 16);
-            R = parseInt(R * (100 + percent) / 100); G = parseInt(G * (100 + percent) / 100); B = parseInt(B * (100 + percent) / 100);
-            R = (R < 255) ? R : 255; G = (G < 255) ? G : 255; B = (B < 255) ? B : 255;
-            return "#" + ((1 << 24) + (R << 16) + (G << 8) + B).toString(16).slice(1);
-        }
-
-        // --- CORE SYSTEMS ---
-        function saveHistory() {
-            if (historyIndex < history.length - 1) history = history.slice(0, historyIndex + 1);
-            history.push(JSON.parse(JSON.stringify(state)));
-            historyIndex++;
-        }
-        function undo() {
-            if (historyIndex > 0) { historyIndex--; state = JSON.parse(JSON.stringify(history[historyIndex])); applyTheme(); updateCanvasTransform(); render(); }
-        }
-
-        async function saveBoard() {
-            const data = JSON.stringify(state);
-            if ('showSaveFilePicker' in window) {
-                try {
-                    const handle = await window.showSaveFilePicker({ suggestedName: 'Board.board', types: [{ description: 'PC Board File', accept: { 'application/json': ['.board'] } }] });
-                    const writable = await handle.createWritable();
-                    await writable.write(data); await writable.close();
-                } catch (e) { }
-            } else {
-                const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: "application/json" })); a.download = "case.board"; a.click();
+        function liveUpdateColor(val) {
+            if (selectedId) {
+                const item = state.items.find(i => i.id === selectedId);
+                if (item && item.type !== 'image') {
+                    item.color = val;
+                    const el = document.getElementById(selectedId);
+                    if (el) el.style.background = val;
+                }
             }
         }
 
-        function loadBoardFile(input) {
-            const r = new FileReader();
-            r.onload = (e) => { state = JSON.parse(e.target.result); applyTheme(); updateCanvasTransform(); render(); };
-            r.readAsText(input.files[0]);
-            document.getElementById('start-screen').style.display = 'none';
-        }
-
-        // --- RENDER & ITEMS ---
-        function addItem(type, content = '', name = 'Recording') {
-            const centerX = (window.innerWidth / 2 - state.view.x) / state.view.zoom;
-            const centerY = (window.innerHeight / 2 - state.view.y) / state.view.zoom;
-            state.items.push({
-                id: 'item_' + Date.now() + Math.random().toString(36).substr(2, 5),
-                type, x: centerX - 100, y: centerY - 100, w: 200, h: 200,
-                content: content || (type === 'note' ? 'Write here...' : ''),
-                color: document.getElementById('item-color-picker').value,
-                fileName: name
-            });
+        function addItem(type, content = '', name = 'Evidence') {
+            const cx = (window.innerWidth / 2 - state.view.x) / state.view.zoom;
+            const cy = (window.innerHeight / 2 - state.view.y) / state.view.zoom;
+            const id = 'itm' + Date.now();
+            // Default size for audio is slightly larger to fit the bigger text
+            state.items.push({ id, type, x: cx - 100, y: cy - 100, w: type === 'sound' ? 320 : 200, h: type === 'sound' ? 140 : 200, content, color: document.getElementById('item-color-picker').value, fileName: name });
+            selectedId = id;
             saveHistory(); render();
         }
 
         function render() {
             const canvas = document.getElementById('canvas');
-            if (document.querySelector('.editing')) return;
             canvas.querySelectorAll('.item').forEach(el => el.remove());
-
             state.items.forEach(item => {
                 const el = document.createElement('div');
-                el.id = item.id;
-                el.className = 'item' + (selectedId === item.id ? ' selected' : '') + (connectStartId === item.id ? ' connecting-source' : '');
-                el.style.cssText = `left:${item.x}px; top:${item.y}px; width:${item.w}px; height:${item.h}px; background-color:${item.type === 'note' || item.type === 'sound' ? item.color : 'transparent'};`;
+                el.id = item.id; el.className = 'item' + (selectedId === item.id ? ' selected' : '');
+                el.style.cssText = `left:${item.x}px; top:${item.y}px; width:${item.w}px; height:${item.h}px; background:${item.type === 'image' ? 'transparent' : item.color}; font-family:var(--main-font); cursor:grab;`;
 
-                if (item.type === 'note') el.innerHTML = `<div class="item-content">${item.content}</div>`;
-                else if (item.type === 'image') el.innerHTML = `<img src="${item.content}">`;
-                else if (item.type === 'sound') {
-                    el.innerHTML = `<div class="sound-icon">🔊</div><div class="sound-label">${item.fileName}</div>`;
-                    el.onclick = (e) => { if (!connectMode) { new Audio(item.content).play(); } };
+                if (item.type === 'note') {
+                    el.innerHTML = `<div class="item-content" contenteditable="true" spellcheck="false">${item.content || 'Click to type...'}</div>`;
+                    const box = el.querySelector('.item-content');
+                    box.oninput = () => { item.content = box.innerText; };
+                    box.onmousedown = (e) => { e.stopPropagation(); selectItem(item.id); };
+                } else if (item.type === 'image') {
+                    el.innerHTML = `<img src="${item.content}">`;
+                } else if (item.type === 'sound') {
+                    el.innerHTML = `
+                            <div class="audio-container">
+                                <div class="audio-name">${item.fileName}</div>
+                                <audio controls src="${item.content}"></audio>
+                            </div>`;
+                    el.querySelector('audio').onmousedown = (e) => e.stopPropagation();
                 }
 
                 el.innerHTML += `<div class="resizer"></div><div class="del-btn">X</div>`;
 
                 el.onmousedown = (e) => {
-                    e.stopPropagation();
-                    if (e.target.classList.contains('resizer')) startResize(e, item.id);
-                    else if (!connectMode) startDrag(e, item.id);
-                };
-                el.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (connectMode) handleConnectClick(item.id);
-                    else { selectedId = item.id; render(); }
-                });
-
-                el.ondblclick = () => {
-                    if (item.type !== 'note') return;
-                    el.classList.add('editing'); const t = el.querySelector('.item-content');
-                    t.contentEditable = true; t.focus();
-                    t.onblur = () => { item.content = t.innerText; el.classList.remove('editing'); saveHistory(); render(); };
-                };
-
-                el.querySelector('.del-btn').onclick = (e) => {
-                    e.stopPropagation();
-                    state.items = state.items.filter(i => i.id !== item.id);
-                    state.connections = state.connections.filter(c => c.from !== item.id && c.to !== item.id);
-                    saveHistory(); render();
+                    if (e.target.classList.contains('del-btn')) {
+                        state.items = state.items.filter(i => i.id !== item.id);
+                        state.connections = state.connections.filter(c => c.from !== item.id && c.to !== item.id);
+                        saveHistory(); render(); return;
+                    }
+                    if (e.target.classList.contains('resizer')) { startResize(e, item.id); return; }
+                    if (connectMode) { handleConnectClick(item.id); return; }
+                    selectItem(item.id);
+                    startDrag(e, item.id);
                 };
                 canvas.appendChild(el);
             });
             drawLines();
         }
 
-        function drawLines() {
-            const svg = document.getElementById('connections');
-            svg.innerHTML = '';
-            state.connections.forEach(conn => {
-                const i1 = state.items.find(i => i.id === conn.from), i2 = state.items.find(i => i.id === conn.to);
-                if (i1 && i2) {
-                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    line.setAttribute('x1', i1.x + i1.w / 2); line.setAttribute('y1', i1.y + i1.h / 2);
-                    line.setAttribute('x2', i2.x + i2.w / 2); line.setAttribute('y2', i2.y + i2.h / 2);
-                    line.setAttribute('stroke', conn.color); line.setAttribute('stroke-width', '4');
-                    line.setAttribute('stroke-linecap', 'round');
-                    svg.appendChild(line);
-                }
-            });
+        function selectItem(id) {
+            selectedId = id;
+            const item = state.items.find(i => i.id === id);
+            if (item && item.color) document.getElementById('item-color-picker').value = item.color;
+            document.querySelectorAll('.item').forEach(el => el.classList.toggle('selected', el.id === id));
         }
-
-        // --- CONTROLS ---
-        function triggerUpload(type) {
-            const inp = document.getElementById('universal-upload');
-            inp.accept = type === 'image' ? 'image/*' : 'audio/*';
-            inp.onchange = (e) => {
-                const file = e.target.files[0];
-                const r = new FileReader();
-                r.onload = (ev) => addItem(type, ev.target.result, file.name);
-                r.readAsDataURL(file);
-            };
-            inp.click();
-        }
-
-        function paintSelected() {
-            const itm = state.items.find(i => i.id === selectedId);
-            if (itm) { itm.color = document.getElementById('item-color-picker').value; saveHistory(); render(); }
-        }
-
-        function toggleConnectMode() { connectMode = !connectMode; connectStartId = null; document.getElementById('btn-connect').classList.toggle('active', connectMode); render(); }
-
-        function handleConnectClick(id) {
-            if (!connectStartId) connectStartId = id;
-            else {
-                if (connectStartId !== id) { state.connections.push({ from: connectStartId, to: id, color: document.getElementById('item-color-picker').value }); saveHistory(); }
-                connectStartId = null; connectMode = false; document.getElementById('btn-connect').classList.remove('active');
-            }
-            render();
-        }
-
-        function startPan(e) {
-            if (e.target.id !== 'board') return;
-            isPanning = true; offset.x = e.clientX - state.view.x; offset.y = e.clientY - state.view.y;
-            document.onmousemove = (ev) => { state.view.x = ev.clientX - offset.x; state.view.y = ev.clientY - offset.y; updateCanvasTransform(); };
-            document.onmouseup = () => { document.onmousemove = null; isPanning = false; };
-        }
-
-        function handleZoom(e) {
-            e.preventDefault(); const oldZoom = state.view.zoom;
-            const newZoom = Math.min(Math.max(0.1, oldZoom + (-e.deltaY * 0.001)), 3);
-            state.view.x = e.clientX - (e.clientX - state.view.x) * (newZoom / oldZoom);
-            state.view.y = e.clientY - (e.clientY - state.view.y) * (newZoom / oldZoom);
-            state.view.zoom = newZoom; updateCanvasTransform();
-        }
-
-        function updateCanvasTransform() { document.getElementById('canvas').style.transform = `translate(${state.view.x}px, ${state.view.y}px) scale(${state.view.zoom})`; }
 
         function startDrag(e, id) {
-            dragItem = state.items.find(i => i.id === id);
-            offset.x = e.clientX / state.view.zoom - dragItem.x;
-            offset.y = e.clientY / state.view.zoom - dragItem.y;
+            const item = state.items.find(i => i.id === id);
+            offset.x = e.clientX / state.view.zoom - item.x;
+            offset.y = e.clientY / state.view.zoom - item.y;
             document.onmousemove = (ev) => {
-                dragItem.x = ev.clientX / state.view.zoom - offset.x; dragItem.y = ev.clientY / state.view.zoom - offset.y;
-                drawLines(); const el = document.getElementById(dragItem.id); el.style.left = dragItem.x + 'px'; el.style.top = dragItem.y + 'px';
+                item.x = ev.clientX / state.view.zoom - offset.x; item.y = ev.clientY / state.view.zoom - offset.y;
+                const el = document.getElementById(id); el.style.left = item.x + 'px'; el.style.top = item.y + 'px';
+                drawLines();
             };
             document.onmouseup = () => { document.onmousemove = null; saveHistory(); };
         }
 
         function startResize(e, id) {
-            e.stopPropagation(); resizeItem = state.items.find(i => i.id === id);
-            offset.w = e.clientX / state.view.zoom - resizeItem.w; offset.h = e.clientY / state.view.zoom - resizeItem.h;
+            e.stopPropagation(); const item = state.items.find(i => i.id === id);
+            offset.w = e.clientX / state.view.zoom - item.w; offset.h = e.clientY / state.view.zoom - item.h;
             document.onmousemove = (ev) => {
-                resizeItem.w = Math.max(80, ev.clientX / state.view.zoom - offset.w); resizeItem.h = Math.max(80, ev.clientY / state.view.zoom - offset.h);
-                drawLines(); const el = document.getElementById(resizeItem.id); el.style.width = resizeItem.w + 'px'; el.style.height = resizeItem.h + 'px';
+                item.w = Math.max(50, ev.clientX / state.view.zoom - offset.w); item.h = Math.max(50, ev.clientY / state.view.zoom - offset.h);
+                const el = document.getElementById(id); el.style.width = item.w + 'px'; el.style.height = item.h + 'px';
+                drawLines();
             };
             document.onmouseup = () => { document.onmousemove = null; saveHistory(); };
         }
+
+        function drawLines() {
+            const svg = document.getElementById('connections'); svg.innerHTML = '';
+            state.connections.forEach(conn => {
+                const i1 = state.items.find(i => i.id === conn.from), i2 = state.items.find(i => i.id === conn.to);
+                if (i1 && i2) {
+                    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    l.setAttribute('x1', i1.x + i1.w / 2); l.setAttribute('y1', i1.y + i1.h / 2);
+                    l.setAttribute('x2', i2.x + i2.w / 2); l.setAttribute('y2', i2.y + i2.h / 2);
+                    l.setAttribute('stroke', conn.color); l.setAttribute('stroke-width', '4');
+                    svg.appendChild(l);
+                }
+            });
+        }
+
+        async function saveBoard() {
+            const data = JSON.stringify(state);
+            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data])); a.download = "PC_Board.board"; a.click();
+        }
+
+        function loadBoardFile(i) {
+            const r = new FileReader();
+            r.onload = (e) => { state = JSON.parse(e.target.result); updateCanvasTransform(); render(); };
+            r.readAsText(i.files[0]); document.getElementById('start-screen').style.display = 'none';
+        }
+
+        function triggerUpload(t) {
+            const inp = document.getElementById('universal-upload');
+            inp.accept = t === 'image' ? 'image/*' : 'audio/*';
+            inp.onchange = (e) => {
+                const f = e.target.files[0];
+                const r = new FileReader();
+                r.onload = (ev) => addItem(t, ev.target.result, f.name);
+                r.readAsDataURL(f);
+            };
+            inp.click();
+        }
+
+        function toggleConnectMode() { connectMode = !connectMode; connectStartId = null; document.getElementById('btn-connect').style.background = connectMode ? 'red' : '#444'; }
+        function handleConnectClick(id) { if (!connectStartId) connectStartId = id; else { if (connectStartId !== id) { state.connections.push({ from: connectStartId, to: id, color: document.getElementById('item-color-picker').value }); saveHistory(); } connectStartId = null; connectMode = false; document.getElementById('btn-connect').style.background = '#444'; render(); } }
+        function startPan(e) { if (e.target.id !== 'board') return; offset.x = e.clientX - state.view.x; offset.y = e.clientY - state.view.y; document.onmousemove = (ev) => { state.view.x = ev.clientX - offset.x; state.view.y = ev.clientY - offset.y; updateCanvasTransform(); }; document.onmouseup = () => { document.onmousemove = null; }; }
+        function handleZoom(e) { e.preventDefault(); const oz = state.view.zoom; const nz = Math.min(Math.max(0.1, oz + (-e.deltaY * 0.001)), 3); state.view.x = e.clientX - (e.clientX - state.view.x) * (nz / oz); state.view.y = e.clientY - (e.clientY - state.view.y) * (nz / oz); state.view.zoom = nz; updateCanvasTransform(); }
+        function updateCanvasTransform() { document.getElementById('canvas').style.transform = `translate(${state.view.x}px, ${state.view.y}px) scale(${state.view.zoom})`; }
     </script>
 </body>
 </html>
