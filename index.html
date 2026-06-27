@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PC BOARD</title>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Special+Elite&family=Permanent+Marker&display=swap" rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-color: #1a1a1a;
@@ -54,6 +53,7 @@
             align-items: center;
             justify-content: center;
         }
+        .tool-btn:hover { background: #555; }
 
         #board {
             width: 100vw;
@@ -62,45 +62,64 @@
             overflow: hidden;
             cursor: grab;
         }
+        #board.panning { cursor: grabbing; }
 
         #canvas {
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 0; left: 0;
             transform-origin: 0 0;
         }
 
-        #connections {
+        /* ── SVG Strings Layer (Moved inside canvas, anchored behind items) ── */
+        #connections-svg {
             position: absolute;
-            top: 0;
-            left: 0;
-            overflow: visible;
+            top: 0; left: 0;
+            width: 1px; height: 1px;
             pointer-events: none;
-            z-index: 1;
+            z-index: 0;
+            overflow: visible;
         }
 
+        /* ── Item shell ── */
         .item {
             position: absolute;
-            min-width: 50px;
-            min-height: 50px;
+            min-width: 120px;
+            min-height: 80px;
             box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
-            z-index: 2;
+            z-index: 2; /* Sits above connections */
             border-radius: 4px;
             display: flex;
             flex-direction: column;
+            resize: both;
+            overflow: hidden;
         }
+        .item.selected  { outline: 4px solid #00ffcc; z-index: 5; }
+        .item.connect-source { outline: 4px solid #ff9900; z-index: 6; }
 
-            .item.selected {
-                outline: 4px solid #00ffcc;
-                z-index: 5;
-            }
-
-        .item-content {
+        /* ── Drag handle overlay (Invisible until hover, NO dots) ── */
+        .item-handle {
+            position: absolute;
+            top: 0; left: 0;
             width: 100%;
-            height: 100%;
+            height: 24px;
+            background: rgba(0,0,0,0.5);
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .item:hover .item-handle { opacity: 1; }
+        .item-handle:active { cursor: grabbing; }
+
+        /* ── Note text area ── */
+        .item-content {
+            flex: 1;
             outline: none;
             white-space: pre-wrap;
-            padding: 15px;
+            padding: 28px 15px 15px; /* Top padding buffers the drag handle */
             box-sizing: border-box;
             color: #000;
             font-weight: bold;
@@ -108,9 +127,10 @@
             font-family: inherit;
             cursor: text;
             user-select: text;
+            min-height: 0;
         }
 
-        /* IMAGE STRETCH FIX: Changed object-fit to 'fill' to allow free distortion */
+        /* ── Images ── */
         .item img {
             width: 100%;
             height: 100%;
@@ -119,244 +139,611 @@
             display: block;
         }
 
-        /* AUDIO FIXES: Bigger text and internal padding for alignment */
-        .audio-container {
-            padding: 12px;
+        /* ── Audio ── */
+        .audio-body {
+            flex: 1;
+            padding: 28px 12px 12px; /* Top padding buffers the drag handle */
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            width: 100%;
-            height: 100%;
+            gap: 8px;
             justify-content: center;
             box-sizing: border-box;
+            min-height: 0;
         }
-
         .audio-name {
             color: #000;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             text-align: center;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            margin-bottom: 5px;
         }
-
         audio {
             width: 100%;
             height: 35px;
             filter: invert(100%) hue-rotate(180deg) brightness(1.5);
         }
 
-        .resizer {
-            width: 22px;
-            height: 22px;
-            background: rgba(0,0,0,0.4);
-            position: absolute;
+        /* ── History panel ── */
+        #history-panel {
+            position: fixed;
+            top: 0; right: 0;
+            width: 220px;
+            height: 100vh;
+            background: #1c1c1c;
+            border-left: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            z-index: 900;
+            font-family: var(--main-font);
+            transition: transform 0.25s ease;
+        }
+        #history-panel.collapsed { transform: translateX(100%); }
+
+        #history-tab {
+            position: fixed;
+            top: 50%;
             right: 0;
-            bottom: 0;
-            cursor: nwse-resize;
-            z-index: 10;
-            border-radius: 0 0 4px 0;
-            border: 1px solid rgba(255,255,255,0.2);
+            transform: translateY(-50%);
+            background: #222;
+            border: 1px solid #444;
+            border-right: none;
+            border-radius: 6px 0 0 6px;
+            padding: 10px 6px;
+            cursor: pointer;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-size: 11px;
+            color: #aaa;
+            z-index: 901;
+            letter-spacing: 2px;
+            user-select: none;
+            transition: right 0.25s ease;
+        }
+        #history-panel:not(.collapsed) ~ #history-tab { right: 220px; }
+
+        #history-panel h3 {
+            margin: 0;
+            padding: 14px 16px 10px;
+            font-size: 11px;
+            color: #888;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #2a2a2a;
+            flex-shrink: 0;
         }
 
+        #history-panel .hist-actions {
+            display: flex;
+            gap: 8px;
+            padding: 10px 12px;
+            border-bottom: 1px solid #2a2a2a;
+            flex-shrink: 0;
+        }
+        #history-panel .hist-actions button {
+            flex: 1;
+            background: #333;
+            border: 1px solid #555;
+            color: #ccc;
+            padding: 6px 4px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+        }
+        #history-panel .hist-actions button:hover { background: #444; }
+        #history-panel .hist-actions button:disabled { opacity: 0.3; cursor: default; }
+
+        #history-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px 0;
+        }
+        #history-list::-webkit-scrollbar { width: 4px; }
+        #history-list::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+        .hist-entry {
+            padding: 7px 14px;
+            font-size: 11px;
+            color: #666;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-left: 3px solid transparent;
+        }
+        .hist-entry:hover { background: #252525; color: #aaa; }
+        .hist-entry.current {
+            color: #00ffcc;
+            border-left-color: #00ffcc;
+            background: #1a2e2a;
+        }
+        .hist-entry .hist-icon { font-size: 13px; flex-shrink: 0; }
+        .hist-entry .hist-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* ── Save name input in toolbar ── */
+        #save-name {
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            padding: 0 10px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 12px;
+            height: 40px;
+            width: 130px;
+        }
+        #save-name:focus { outline: none; border-color: #00ffcc; }
+
+        /* ── Delete button ── */
         .del-btn {
             position: absolute;
-            top: -12px;
-            right: -12px;
-            width: 26px;
-            height: 26px;
+            top: 4px; right: 4px;
+            width: 22px; height: 22px;
             background: #ff4444;
             color: white;
             border-radius: 50%;
             text-align: center;
             cursor: pointer;
             font-weight: bold;
-            line-height: 26px;
+            line-height: 22px;
             z-index: 11;
-            border: 2px solid white;
+            border: 1px solid white;
             display: none;
+            font-size: 11px;
         }
-
-        .item:hover .del-btn {
-            display: block;
-        }
+        .item:hover .del-btn { display: block; }
     </style>
 </head>
 <body>
 
-    <div id="start-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#111; z-index:2000; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;">
-        <h1 style="border: 4px solid red; padding: 20px;">PC BOARD</h1>
-        <div style="display:flex; gap: 20px;">
-            <button class="tool-btn" onclick="initBoard('new')">NEW BOARD</button>
-            <button class="tool-btn" onclick="document.getElementById('file-loader').click()">LOAD .BOARD</button>
-        </div>
-        <input type="file" id="file-loader" style="display:none" accept=".board" onchange="loadBoardFile(this)">
+<div id="start-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#111;z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+    <h1 style="border:4px solid red;padding:20px;">PC BOARD</h1>
+    <div style="display:flex;gap:20px;">
+        <button class="tool-btn" onclick="initBoard()">NEW BOARD</button>
+        <button class="tool-btn" onclick="document.getElementById('file-loader').click()">LOAD .BOARD</button>
     </div>
+    <input type="file" id="file-loader" style="display:none" accept=".board" onchange="loadBoardFile(this)">
+</div>
 
-    <div id="board" onmousedown="startPan(event)" onwheel="handleZoom(event)">
-        <div id="canvas">
-            <svg id="connections"></svg>
-        </div>
+<div id="board" onwheel="handleZoom(event)">
+    <div id="canvas">
+        <svg id="connections-svg"></svg>
     </div>
+</div>
 
-    <div id="toolbar">
-        <input type="color" id="item-color-picker" value="#ffeb3b" style="width:40px; height:35px;" oninput="liveUpdateColor(this.value)">
-        <button class="tool-btn" onclick="addItem('note')">📝 Note</button>
-        <button class="tool-btn" onclick="triggerUpload('image')">📷 Image</button>
-        <button class="tool-btn" onclick="triggerUpload('sound')">🎙️ Audio</button>
-        <button id="btn-connect" class="tool-btn" onclick="toggleConnectMode()">🔗 String</button>
-        <button class="tool-btn" onclick="undo()">↩ Undo</button>
-        <button class="tool-btn" onclick="saveBoard()" style="background:#28a745;">💾 Save</button>
+<!-- History side panel -->
+<div id="history-panel" class="collapsed">
+    <h3>History</h3>
+    <div class="hist-actions">
+        <button id="btn-undo" onclick="undo()" disabled>↩ Undo</button>
+        <button id="btn-redo" onclick="redo()" disabled>↪ Redo</button>
     </div>
+    <div id="history-list"></div>
+</div>
+<div id="history-tab" onclick="toggleHistoryPanel()">HISTORY</div>
 
-    <input type="file" id="universal-upload" style="display:none">
+<div id="toolbar">
+    <input type="color" id="item-color-picker" value="#ffeb3b" style="width:40px;height:35px;cursor:pointer;" oninput="liveUpdateColor(this.value)">
+    <button class="tool-btn" onclick="addItem('note')">📝 Note</button>
+    <button class="tool-btn" onclick="triggerUpload('image')">📷 Image</button>
+    <button class="tool-btn" onclick="triggerUpload('sound')">🎙️ Audio</button>
+    <button id="btn-connect" class="tool-btn" onclick="toggleConnectMode()">🔗 String</button>
+    <input type="text" id="save-name" value="PC_Board" placeholder="Board name…">
+    <button class="tool-btn" onclick="saveBoard()" style="background:#28a745;">💾 Save</button>
+</div>
 
-    <script>
-        let state = { items: [], connections: [], view: { x: 0, y: 0, zoom: 1 } };
-        let history = []; let historyIndex = -1;
-        let connectMode = false, connectStartId = null, selectedId = null, offset = { x: 0, y: 0 };
+<input type="file" id="universal-upload" style="display:none">
 
-        function initBoard(m) { if (m === 'new') saveHistory(); document.getElementById('start-screen').style.display = 'none'; render(); }
-        function saveHistory() { if (historyIndex < history.length - 1) history = history.slice(0, historyIndex + 1); history.push(JSON.parse(JSON.stringify(state))); historyIndex++; }
-        function undo() { if (historyIndex > 0) { historyIndex--; state = JSON.parse(JSON.stringify(history[historyIndex])); updateCanvasTransform(); render(); } }
+<script>
+    let state = { items: [], connections: [], view: { x:0, y:0, zoom:1 } };
+    let history = [], historyIndex = -1;
+    let connectMode = false, connectStartId = null, selectedId = null;
 
-        function liveUpdateColor(val) {
-            if (selectedId) {
-                const item = state.items.find(i => i.id === selectedId);
-                if (item && item.type !== 'image') {
-                    item.color = val;
-                    const el = document.getElementById(selectedId);
-                    if (el) el.style.background = val;
-                }
-            }
+    // ── Init ──────────────────────────────────────────────────────────────────
+
+    function initBoard() {
+        saveHistory('New board');
+        document.getElementById('start-screen').style.display = 'none';
+        setupBoard();
+        render();
+        renderHistoryPanel();
+    }
+
+    function setupBoard() {
+        const board = document.getElementById('board');
+        board.addEventListener('mousedown', onBoardMouseDown, true);
+        board.addEventListener('mousedown', onBoardPan, false);
+    }
+
+    // ── History ───────────────────────────────────────────────────────────────
+
+    const ACTION_ICONS = {
+        'New board': '🗒️', 'Add note': '📝', 'Add image': '📷', 'Add audio': '🎙️',
+        'Delete item': '🗑️', 'Move item': '↕️', 'Resize item': '⤡',
+        'Add string': '🔗', 'Remove string': '✂️', 'Undo': '↩', 'Load board': '📂',
+        'Change color': '🎨'
+    };
+
+    function saveHistory(label = 'Action') {
+        if (historyIndex < history.length - 1) history = history.slice(0, historyIndex + 1);
+        history.push({ snapshot: JSON.parse(JSON.stringify(state)), label });
+        historyIndex++;
+        renderHistoryPanel();
+    }
+
+    function undo() {
+        if (historyIndex > 0) {
+            historyIndex--;
+            state = JSON.parse(JSON.stringify(history[historyIndex].snapshot));
+            updateCanvasTransform();
+            render();
+            renderHistoryPanel();
         }
+    }
 
-        function addItem(type, content = '', name = 'Evidence') {
-            const cx = (window.innerWidth / 2 - state.view.x) / state.view.zoom;
-            const cy = (window.innerHeight / 2 - state.view.y) / state.view.zoom;
-            const id = 'itm' + Date.now();
-            // Default size for audio is slightly larger to fit the bigger text
-            state.items.push({ id, type, x: cx - 100, y: cy - 100, w: type === 'sound' ? 320 : 200, h: type === 'sound' ? 140 : 200, content, color: document.getElementById('item-color-picker').value, fileName: name });
-            selectedId = id;
-            saveHistory(); render();
+    function redo() {
+        if (historyIndex < history.length - 1) {
+            historyIndex++;
+            state = JSON.parse(JSON.stringify(history[historyIndex].snapshot));
+            updateCanvasTransform();
+            render();
+            renderHistoryPanel();
         }
+    }
 
-        function render() {
-            const canvas = document.getElementById('canvas');
-            canvas.querySelectorAll('.item').forEach(el => el.remove());
-            state.items.forEach(item => {
-                const el = document.createElement('div');
-                el.id = item.id; el.className = 'item' + (selectedId === item.id ? ' selected' : '');
-                el.style.cssText = `left:${item.x}px; top:${item.y}px; width:${item.w}px; height:${item.h}px; background:${item.type === 'image' ? 'transparent' : item.color}; font-family:var(--main-font); cursor:grab;`;
+    function jumpToHistory(idx) {
+        historyIndex = idx;
+        state = JSON.parse(JSON.stringify(history[historyIndex].snapshot));
+        updateCanvasTransform();
+        render();
+        renderHistoryPanel();
+    }
 
-                if (item.type === 'note') {
-                    el.innerHTML = `<div class="item-content" contenteditable="true" spellcheck="false">${item.content || 'Click to type...'}</div>`;
-                    const box = el.querySelector('.item-content');
-                    box.oninput = () => { item.content = box.innerText; };
-                    box.onmousedown = (e) => { e.stopPropagation(); selectItem(item.id); };
-                } else if (item.type === 'image') {
-                    el.innerHTML = `<img src="${item.content}">`;
-                } else if (item.type === 'sound') {
-                    el.innerHTML = `
-                            <div class="audio-container">
-                                <div class="audio-name">${item.fileName}</div>
-                                <audio controls src="${item.content}"></audio>
-                            </div>`;
-                    el.querySelector('audio').onmousedown = (e) => e.stopPropagation();
-                }
+    function renderHistoryPanel() {
+        const list = document.getElementById('history-list');
+        list.innerHTML = '';
+        // Show newest at top
+        for (let i = history.length - 1; i >= 0; i--) {
+            const entry = document.createElement('div');
+            entry.className = 'hist-entry' + (i === historyIndex ? ' current' : '');
+            const h = history[i];
+            const icon = ACTION_ICONS[h.label] || '·';
+            entry.innerHTML = `<span class="hist-icon">${icon}</span><span class="hist-label">${h.label}</span>`;
+            entry.addEventListener('click', () => jumpToHistory(i));
+            list.appendChild(entry);
+        }
+        document.getElementById('btn-undo').disabled = historyIndex <= 0;
+        document.getElementById('btn-redo').disabled = historyIndex >= history.length - 1;
+    }
 
-                el.innerHTML += `<div class="resizer"></div><div class="del-btn">X</div>`;
+    function toggleHistoryPanel() {
+        document.getElementById('history-panel').classList.toggle('collapsed');
+    }
 
-                el.onmousedown = (e) => {
-                    if (e.target.classList.contains('del-btn')) {
-                        state.items = state.items.filter(i => i.id !== item.id);
-                        state.connections = state.connections.filter(c => c.from !== item.id && c.to !== item.id);
-                        saveHistory(); render(); return;
-                    }
-                    if (e.target.classList.contains('resizer')) { startResize(e, item.id); return; }
-                    if (connectMode) { handleConnectClick(item.id); return; }
-                    selectItem(item.id);
-                    startDrag(e, item.id);
-                };
-                canvas.appendChild(el);
+    // ── Color ─────────────────────────────────────────────────────────────────
+
+    function liveUpdateColor(val) {
+        if (!selectedId) return;
+        const item = state.items.find(i => i.id === selectedId);
+        if (item && item.type !== 'image') {
+            item.color = val;
+            const el = document.getElementById(selectedId);
+            if (el) el.style.background = val;
+        }
+    }
+
+    // ── Add Item ──────────────────────────────────────────────────────────────
+
+    function addItem(type, content = '', name = 'Audio') {
+        const cx = (window.innerWidth  / 2 - state.view.x) / state.view.zoom;
+        const cy = (window.innerHeight / 2 - state.view.y) / state.view.zoom;
+        const id = 'itm' + Date.now();
+        const w  = type === 'sound' ? 320 : 200;
+        const h  = type === 'sound' ? 140 : 200;
+        state.items.push({ id, type, x: cx - w/2, y: cy - h/2, w, h, content,
+            color: document.getElementById('item-color-picker').value, fileName: name });
+        selectedId = id;
+        const label = type === 'note' ? 'Add note' : type === 'image' ? 'Add image' : 'Add audio';
+        saveHistory(label);
+        render();
+    }
+
+    // ── Render ────────────────────────────────────────────────────────────────
+
+    function render() {
+        const canvas = document.getElementById('canvas');
+        canvas.querySelectorAll('.item').forEach(el => el.remove());
+
+        state.items.forEach(item => {
+            const el = document.createElement('div');
+            el.id = item.id;
+            el.className = 'item'
+                + (selectedId === item.id ? ' selected' : '')
+                + (connectMode && connectStartId === item.id ? ' connect-source' : '');
+            el.style.cssText =
+                `left:${item.x}px; top:${item.y}px; width:${item.w}px; height:${item.h}px;`
+                + `background:${item.type === 'image' ? 'transparent' : item.color};`;
+
+            // ── Drag handle ──
+            const handle = document.createElement('div');
+            handle.className = 'item-handle';
+            handle.addEventListener('mousedown', e => {
+                if (connectMode) return; 
+                e.stopPropagation();
+                selectItem(item.id);
+                startDrag(e, item);
             });
+            el.appendChild(handle);
+
+            // ── Content ──
+            if (item.type === 'note') {
+                const box = document.createElement('div');
+                box.className = 'item-content';
+                box.contentEditable = 'true';
+                box.spellcheck = false;
+                box.textContent = item.content;
+                box.addEventListener('input', () => { item.content = box.innerText; });
+                box.addEventListener('mousedown', e => e.stopPropagation());
+                el.appendChild(box);
+
+            } else if (item.type === 'image') {
+                const img = document.createElement('img');
+                img.src = item.content;
+                img.draggable = false;
+                el.appendChild(img);
+
+            } else if (item.type === 'sound') {
+                const body = document.createElement('div');
+                body.className = 'audio-body';
+                const lbl = document.createElement('div');
+                lbl.className = 'audio-name';
+                lbl.textContent = item.fileName;
+                const aud = document.createElement('audio');
+                aud.controls = true;
+                aud.src = item.content;
+                aud.addEventListener('mousedown', e => e.stopPropagation());
+                body.appendChild(lbl);
+                body.appendChild(aud);
+                el.appendChild(body);
+            }
+
+            // ── Delete button ──
+            const del = document.createElement('div');
+            del.className = 'del-btn';
+            del.textContent = '✕';
+            del.addEventListener('mousedown', e => e.stopPropagation());
+            del.addEventListener('click', () => {
+                state.items = state.items.filter(i => i.id !== item.id);
+                state.connections = state.connections.filter(c => c.from !== item.id && c.to !== item.id);
+                if (selectedId === item.id) selectedId = null;
+                saveHistory('Delete item'); render();
+            });
+            el.appendChild(del);
+
+            // ── CSS resize sync ──
+            el.addEventListener('mouseup', () => {
+                const rect = el.getBoundingClientRect();
+                const newW = rect.width  / state.view.zoom;
+                const newH = rect.height / state.view.zoom;
+                if (Math.abs(newW - item.w) > 1 || Math.abs(newH - item.h) > 1) {
+                    item.w = newW; item.h = newH;
+                    drawLines();
+                    saveHistory('Resize item');
+                }
+            });
+
+            el.addEventListener('mousedown', e => {
+                if (connectMode) return;
+                selectItem(item.id);
+            });
+
+            canvas.appendChild(el);
+        });
+
+        drawLines();
+    }
+
+    // ── Connect mode capture ─────────────────────────────────────────────────
+
+    function onBoardMouseDown(e) {
+        if (!connectMode) return;
+        const itemEl = e.target.closest('.item');
+        if (!itemEl) return;
+        e.stopPropagation();
+        e.preventDefault();
+        handleConnectClick(itemEl.id);
+    }
+
+    // ── Pan ──────────────────────────────────────────────────────────────────
+
+    function onBoardPan(e) {
+        if (connectMode) return;
+        const itemEl = e.target.closest('.item');
+        if (itemEl) return; 
+        if (e.target.closest('#toolbar')) return;
+        startPan(e);
+    }
+
+    // ── Select ────────────────────────────────────────────────────────────────
+
+    function selectItem(id) {
+        selectedId = id;
+        const item = state.items.find(i => i.id === id);
+        if (item && item.color) document.getElementById('item-color-picker').value = item.color;
+        document.querySelectorAll('.item').forEach(el =>
+            el.classList.toggle('selected', el.id === id));
+    }
+
+    // ── Drag ─────────────────────────────────────────────────────────────────
+
+    function startDrag(e, item) {
+        e.preventDefault();
+        const ox = (e.clientX - state.view.x) / state.view.zoom - item.x;
+        const oy = (e.clientY - state.view.y) / state.view.zoom - item.y;
+        const el = document.getElementById(item.id);
+
+        function onMove(ev) {
+            item.x = (ev.clientX - state.view.x) / state.view.zoom - ox;
+            item.y = (ev.clientY - state.view.y) / state.view.zoom - oy;
+            el.style.left = item.x + 'px';
+            el.style.top  = item.y + 'px';
             drawLines();
         }
-
-        function selectItem(id) {
-            selectedId = id;
-            const item = state.items.find(i => i.id === id);
-            if (item && item.color) document.getElementById('item-color-picker').value = item.color;
-            document.querySelectorAll('.item').forEach(el => el.classList.toggle('selected', el.id === id));
+        function onUp() {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup',  onUp);
+            saveHistory('Move item');
         }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup',  onUp);
+    }
 
-        function startDrag(e, id) {
-            const item = state.items.find(i => i.id === id);
-            offset.x = e.clientX / state.view.zoom - item.x;
-            offset.y = e.clientY / state.view.zoom - item.y;
-            document.onmousemove = (ev) => {
-                item.x = ev.clientX / state.view.zoom - offset.x; item.y = ev.clientY / state.view.zoom - offset.y;
-                const el = document.getElementById(id); el.style.left = item.x + 'px'; el.style.top = item.y + 'px';
-                drawLines();
-            };
-            document.onmouseup = () => { document.onmousemove = null; saveHistory(); };
-        }
+    // ── Draw connections ──────────────────────────────────────────────────────
 
-        function startResize(e, id) {
-            e.stopPropagation(); const item = state.items.find(i => i.id === id);
-            offset.w = e.clientX / state.view.zoom - item.w; offset.h = e.clientY / state.view.zoom - item.h;
-            document.onmousemove = (ev) => {
-                item.w = Math.max(50, ev.clientX / state.view.zoom - offset.w); item.h = Math.max(50, ev.clientY / state.view.zoom - offset.h);
-                const el = document.getElementById(id); el.style.width = item.w + 'px'; el.style.height = item.h + 'px';
-                drawLines();
-            };
-            document.onmouseup = () => { document.onmousemove = null; saveHistory(); };
-        }
+    function drawLines() {
+        const svg = document.getElementById('connections-svg');
+        svg.innerHTML = '';
+        state.connections.forEach(conn => {
+            const i1 = state.items.find(i => i.id === conn.from);
+            const i2 = state.items.find(i => i.id === conn.to);
+            if (!i1 || !i2) return;
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', i1.x + i1.w/2); line.setAttribute('y1', i1.y + i1.h/2);
+            line.setAttribute('x2', i2.x + i2.w/2); line.setAttribute('y2', i2.y + i2.h/2);
+            line.setAttribute('stroke', conn.color || '#ff4444');
+            line.setAttribute('stroke-width', '4');
+            svg.appendChild(line);
+        });
+    }
 
-        function drawLines() {
-            const svg = document.getElementById('connections'); svg.innerHTML = '';
-            state.connections.forEach(conn => {
-                const i1 = state.items.find(i => i.id === conn.from), i2 = state.items.find(i => i.id === conn.to);
-                if (i1 && i2) {
-                    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    l.setAttribute('x1', i1.x + i1.w / 2); l.setAttribute('y1', i1.y + i1.h / 2);
-                    l.setAttribute('x2', i2.x + i2.w / 2); l.setAttribute('y2', i2.y + i2.h / 2);
-                    l.setAttribute('stroke', conn.color); l.setAttribute('stroke-width', '4');
-                    svg.appendChild(l);
-                }
-            });
-        }
+    // ── Save / Load ───────────────────────────────────────────────────────────
 
-        async function saveBoard() {
-            const data = JSON.stringify(state);
-            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data])); a.download = "PC_Board.board"; a.click();
-        }
+    function saveBoard() {
+        const name = (document.getElementById('save-name').value.trim() || 'PC_Board')
+            .replace(/\.board$/i, '');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(state)], { type:'application/json' }));
+        a.download = name + '.board';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
 
-        function loadBoardFile(i) {
+    function loadBoardFile(input) {
+        const r = new FileReader();
+        r.onload = e => {
+            try {
+                state = JSON.parse(e.target.result);
+                if (!state.view) state.view = { x:0, y:0, zoom:1 };
+                // Pre-fill save name from filename
+                const fname = input.files[0].name.replace(/\.board$/i, '');
+                document.getElementById('save-name').value = fname;
+                saveHistory('Load board');
+                updateCanvasTransform();
+                render();
+                renderHistoryPanel();
+            } catch(err) { alert('Failed to load: ' + err.message); }
+        };
+        r.readAsText(input.files[0]);
+        document.getElementById('start-screen').style.display = 'none';
+        setupBoard();
+    }
+
+    // ── Upload ────────────────────────────────────────────────────────────────
+
+    function triggerUpload(type) {
+        const inp = document.getElementById('universal-upload');
+        inp.accept  = type === 'image' ? 'image/*' : 'audio/*';
+        inp.value   = '';
+        inp.onchange = e => {
+            const f = e.target.files[0];
+            if (!f) return;
             const r = new FileReader();
-            r.onload = (e) => { state = JSON.parse(e.target.result); updateCanvasTransform(); render(); };
-            r.readAsText(i.files[0]); document.getElementById('start-screen').style.display = 'none';
-        }
+            r.onload = ev => addItem(type, ev.target.result, f.name);
+            r.readAsDataURL(f);
+        };
+        inp.click();
+    }
 
-        function triggerUpload(t) {
-            const inp = document.getElementById('universal-upload');
-            inp.accept = t === 'image' ? 'image/*' : 'audio/*';
-            inp.onchange = (e) => {
-                const f = e.target.files[0];
-                const r = new FileReader();
-                r.onload = (ev) => addItem(t, ev.target.result, f.name);
-                r.readAsDataURL(f);
-            };
-            inp.click();
-        }
+    // ── Connect mode ──────────────────────────────────────────────────────────
 
-        function toggleConnectMode() { connectMode = !connectMode; connectStartId = null; document.getElementById('btn-connect').style.background = connectMode ? 'red' : '#444'; }
-        function handleConnectClick(id) { if (!connectStartId) connectStartId = id; else { if (connectStartId !== id) { state.connections.push({ from: connectStartId, to: id, color: document.getElementById('item-color-picker').value }); saveHistory(); } connectStartId = null; connectMode = false; document.getElementById('btn-connect').style.background = '#444'; render(); } }
-        function startPan(e) { if (e.target.id !== 'board') return; offset.x = e.clientX - state.view.x; offset.y = e.clientY - state.view.y; document.onmousemove = (ev) => { state.view.x = ev.clientX - offset.x; state.view.y = ev.clientY - offset.y; updateCanvasTransform(); }; document.onmouseup = () => { document.onmousemove = null; }; }
-        function handleZoom(e) { e.preventDefault(); const oz = state.view.zoom; const nz = Math.min(Math.max(0.1, oz + (-e.deltaY * 0.001)), 3); state.view.x = e.clientX - (e.clientX - state.view.x) * (nz / oz); state.view.y = e.clientY - (e.clientY - state.view.y) * (nz / oz); state.view.zoom = nz; updateCanvasTransform(); }
-        function updateCanvasTransform() { document.getElementById('canvas').style.transform = `translate(${state.view.x}px, ${state.view.y}px) scale(${state.view.zoom})`; }
-    </script>
+    function toggleConnectMode() {
+        connectMode = !connectMode;
+        connectStartId = null;
+        document.getElementById('btn-connect').style.background = connectMode ? '#cc3300' : '#444';
+        render();
+    }
+
+    function handleConnectClick(id) {
+        if (!connectStartId) {
+            connectStartId = id;
+            document.querySelectorAll('.item').forEach(el => el.classList.remove('connect-source'));
+            const src = document.getElementById(id);
+            if (src) src.classList.add('connect-source');
+        } else {
+            if (connectStartId !== id) {
+                const existingIndex = state.connections.findIndex(c =>
+                    (c.from === connectStartId && c.to === id) ||
+                    (c.from === id && c.to === connectStartId)
+                );
+
+                if (existingIndex > -1) {
+                    state.connections.splice(existingIndex, 1);
+                    saveHistory('Remove string');
+                } else {
+                    state.connections.push({
+                        from: connectStartId, to: id,
+                        color: document.getElementById('item-color-picker').value
+                    });
+                    saveHistory('Add string');
+                }
+            }
+            connectStartId = null;
+            connectMode = false;
+            document.getElementById('btn-connect').style.background = '#444';
+            render();
+        }
+    }
+
+    // ── Pan ───────────────────────────────────────────────────────────────────
+
+    function startPan(e) {
+        const ox = e.clientX - state.view.x;
+        const oy = e.clientY - state.view.y;
+        const board = document.getElementById('board');
+        board.classList.add('panning');
+        function onMove(ev) {
+            state.view.x = ev.clientX - ox;
+            state.view.y = ev.clientY - oy;
+            updateCanvasTransform();
+        }
+        function onUp() {
+            board.classList.remove('panning');
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup',  onUp);
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup',  onUp);
+    }
+
+    // ── Zoom ──────────────────────────────────────────────────────────────────
+
+    function handleZoom(e) {
+        e.preventDefault();
+        const oz = state.view.zoom;
+        const nz = Math.min(Math.max(0.1, oz - e.deltaY * 0.001), 3);
+        state.view.x    = e.clientX - (e.clientX - state.view.x) * (nz / oz);
+        state.view.y    = e.clientY - (e.clientY - state.view.y) * (nz / oz);
+        state.view.zoom = nz;
+        updateCanvasTransform();
+    }
+
+    function updateCanvasTransform() {
+        const { x, y, zoom } = state.view;
+        const t = `translate(${x}px, ${y}px) scale(${zoom})`;
+        document.getElementById('canvas').style.transform = t;
+    }
+</script>
 </body>
 </html>
