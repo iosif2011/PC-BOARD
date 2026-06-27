@@ -1,5 +1,5 @@
-A Simple PC Board That Can Run Local If It needs To.
+A Simple PC Board That Can Run Localy If It needs To.
 
-THIS IS SO BROKEN!!
+MAKE AND EDIT BOARDS
 
 You Can Save - Load Files That Are .board
